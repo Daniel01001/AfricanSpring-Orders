@@ -176,7 +176,8 @@ async function placeOrder(e) {
   const itemized = [...cart.entries()].map(([id, q]) => { const p = byId(id); return p ? `${q} x ${p.name} @ ${money(p.unitPrice)}` : ""; }).filter(Boolean).join("\n");
   const details = `Items:\n${itemized}\nTotal: ${money(subtotal())}\nDeliver to: ${addr}${note ? "\nNotes: " + note : ""}`;
 
-  const body = { name, phone, product: short.slice(0, 120), details, website: "" };
+  const items = [...cart.entries()].map(([id, q]) => ({ productId: id, quantity: q }));
+  const body = { name, phone, product: short.slice(0, 120), details, website: "", items };
   if (me) { const s = $("cstore"); if (s) body.storeId = Number(s.value); }
 
   const btn = $("placeBtn"); btn.disabled = true; const label = btn.textContent; btn.textContent = "Placing…";
