@@ -171,12 +171,12 @@ async function placeOrder(e) {
   btn.disabled = false; btn.textContent = label;
   if (!r.ok) { err.textContent = (r.data && r.data.error) || "Could not place the order. Please try again."; err.hidden = false; return; }
 
-  showConfirm(name.split(" ")[0]);
+  showConfirm(name.split(" ")[0], r.data && r.data.reference);
   cart.clear(); saveCart(); updateCart(); renderProducts();
 }
 
-function showConfirm(firstName) {
-  $("refCode").textContent = "AS-" + Math.floor(1000 + Math.random() * 9000);
+function showConfirm(firstName, reference) {
+  $("refCode").textContent = reference || ("AS-" + String(Math.floor(1000 + Math.random() * 9000)));
   $("confirmSub").textContent = `We'll Call/WhatsApp ${firstName} shortly to confirm delivery.`;
   const STEPS = [
     ["Order received", "We've got your request."],
@@ -230,7 +230,8 @@ async function loadHistory() {
   el.innerHTML = r.data.map((o) => {
     const d = new Date(o.createdAt);
     const pill = o.status === "Fulfilled" ? "grey" : "new";
-    return `<div class="store-row"><span class="s-main"><div class="s-name">${esc(o.productName || "Order")}</div><div class="s-sub">${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></span><span class="pill ${pill}">${esc(o.status)}</span></div>`;
+    const ref = "AS-" + String(o.id).padStart(4, "0");
+    return `<div class="store-row"><span class="s-main"><div class="s-name">${esc(o.productName || "Order")} <span class="pill grey">${ref}</span></div><div class="s-sub">${d.toLocaleDateString()} &middot; ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></span><span class="pill ${pill}">${esc(o.status)}</span></div>`;
   }).join("");
 }
 function logout() { localStorage.removeItem(T_KEY); localStorage.removeItem(STORE_KEY); me = null; activeStoreId = null; toast("Logged out"); go("shop"); }
