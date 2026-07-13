@@ -1,0 +1,18 @@
+# Render static site blueprint for the AfricanSpring ordering portal.
+# Deploy: push this repo to GitHub, then Render → New → Blueprint → pick the repo.
+# (Or create a Static Site by hand: publish directory ".", no build command.)
+services:
+  - type: web
+    name: africanspring-orders
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
+    headers:
+      # Never long-cache the service worker so updates roll out immediately.
+      - path: /service-worker.js
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

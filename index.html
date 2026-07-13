@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AfricanSpring — Order Ice &amp; Water</title>
+  <meta name="description" content="Order ice and purified water from AfricanSpring in Belgrade &amp; Pongola. Free local delivery, pay on delivery." />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="i-flake" viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2.7 6.5 9.5a7 7 0 1 0 11 0z"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2l2.4 12.4a1 1 0 0 0 1 .8h9.3a1 1 0 0 0 1-.8L21 7H5"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M2 7h20l-1.5 4.5a2 2 0 0 1-3.8.2 2 2 0 0 0-3.8 0 2 2 0 0 1-3.8 0 2 2 0 0 0-3.8 0 2 2 0 0 1-3.8-.2Z"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+  </defs></svg>
+
+  <header class="topbar">
+    <div class="wrap bar">
+      <button class="brand" id="homeBtn">African<span>Spring</span></button>
+      <div class="bar-actions">
+        <button class="iconbtn" id="accountBtn" aria-label="Account"><svg class="icon"><use href="#i-user"/></svg></button>
+        <button class="iconbtn" id="cartBtn" aria-label="Cart"><svg class="icon"><use href="#i-cart"/></svg><span class="badge" id="cartBadge" hidden>0</span></button>
+      </div>
+    </div>
+  </header>
+  <div class="subbar"><div class="wrap">Free delivery in <strong>Belgrade &amp; Pongola</strong> · Pay on delivery</div></div>
+
+  <main id="app" class="wrap">
+    <!-- SHOP -->
+    <section class="screen on" id="screen-shop">
+      <div class="hero">
+        <div class="eyebrow">Order online</div>
+        <h1>Ice &amp; water, to your door</h1>
+        <p>Add what you need, tell us where to bring it, and pay the driver.</p>
+      </div>
+      <div class="products" id="products"></div>
+    </section>
+
+    <!-- CHECKOUT -->
+    <section class="screen" id="screen-checkout">
+      <button class="back" data-go="shop"><svg class="icon"><use href="#i-back"/></svg> Keep shopping</button>
+      <h2>Your order</h2>
+      <div id="checkout"></div>
+    </section>
+
+    <!-- LOGIN -->
+    <section class="screen" id="screen-login">
+      <button class="back" data-go="shop"><svg class="icon"><use href="#i-back"/></svg> Back</button>
+      <div class="panel">
+        <h2>Log in</h2>
+        <p class="muted">Order faster and track your account.</p>
+        <form id="loginForm">
+          <div class="field"><label for="lphone">Phone</label><input id="lphone" type="tel" inputmode="tel" placeholder="083 000 0000" required></div>
+          <div class="field"><label for="lpass">Password</label><input id="lpass" type="password" placeholder="Your password" required></div>
+          <p class="err" id="loginErr" hidden></p>
+          <button class="btn" type="submit">Log in</button>
+        </form>
+        <p class="muted center">New here? <a href="#" data-go="register">Create an account</a></p>
+      </div>
+    </section>
+
+    <!-- REGISTER -->
+    <section class="screen" id="screen-register">
+      <button class="back" data-go="login"><svg class="icon"><use href="#i-back"/></svg> Back</button>
+      <div class="panel">
+        <h2>Create an account</h2>
+        <form id="registerForm">
+          <div class="field"><label for="rname">Business or your name</label><input id="rname" placeholder="e.g. Corner Spaza" required></div>
+          <div class="field"><label for="rphone">Phone</label><input id="rphone" type="tel" inputmode="tel" placeholder="083 000 0000" required></div>
+          <div class="field"><label for="raddr">Address</label><input id="raddr" placeholder="Street / section, Belgrade or Pongola"></div>
+          <div class="field"><label for="rpass">Choose a password</label><input id="rpass" type="password" placeholder="At least 6 characters" required></div>
+          <p class="note">New businesses are added to AfricanSpring for the team to approve before regular supply.</p>
+          <p class="err" id="regErr" hidden></p>
+          <button class="btn" type="submit">Create account</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ACCOUNT -->
+    <section class="screen" id="screen-account">
+      <button class="back" data-go="shop"><svg class="icon"><use href="#i-back"/></svg> Back to shop</button>
+      <div id="account"></div>
+    </section>
+
+    <!-- CHANGE PASSWORD -->
+    <section class="screen" id="screen-changepw">
+      <div class="panel">
+        <h2>Set your password</h2>
+        <p class="muted" id="cpwHint">Choose a new password to finish setting up your account.</p>
+        <form id="changePwForm">
+          <div class="field"><label for="npass">New password</label><input id="npass" type="password" placeholder="At least 6 characters" required></div>
+          <p class="err" id="cpwErr" hidden></p>
+          <button class="btn" type="submit">Save password</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- CONFIRM -->
+    <section class="screen" id="screen-confirm">
+      <div class="panel center">
+        <div class="done"><svg class="icon"><use href="#i-check"/></svg></div>
+        <h2>Order received</h2>
+        <p class="muted" id="confirmSub">We'll WhatsApp you to confirm delivery.</p>
+        <div class="ref"><span class="rl">Reference</span><span class="rc" id="refCode">AS-0000</span></div>
+        <ul class="steps" id="steps"></ul>
+        <div class="row-btns">
+          <button class="btn ghost" id="waBtn">Message on WhatsApp</button>
+          <button class="btn" data-go="shop" id="newOrderBtn">New order</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="cartbar" id="cartbar" hidden>
+    <div class="wrap cartbar-in">
+      <div><div class="ct" id="barTotal">R0.00</div><div class="cc" id="barCount">0 items</div></div>
+      <button class="btn sm" id="toCheckout">Checkout</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="js/app.js"></script>
+</body>
+</html>
