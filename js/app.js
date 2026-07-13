@@ -88,6 +88,15 @@ function updateCart() {
   $("barCount").textContent = n + (n === 1 ? " item" : " items");
   $("cartbar").hidden = n === 0;
 }
+function hasLast() { try { return JSON.parse(localStorage.getItem("as.last") || "[]").length > 0; } catch { return false; } }
+function reorder() {
+  let last = [];
+  try { last = JSON.parse(localStorage.getItem("as.last") || "[]"); } catch (e) { /* none */ }
+  cart.clear();
+  last.forEach(([id, q]) => { if (byId(id)) cart.set(id, q); });
+  saveCart(); renderProducts(); updateCart();
+  if (count() > 0) go("checkout"); else toast("Those items aren't available right now");
+}
 
 /* ---------- Checkout ---------- */
 function renderCheckout() {
@@ -172,6 +181,7 @@ async function placeOrder(e) {
   btn.disabled = false; btn.textContent = label;
   if (!r.ok) { err.textContent = (r.data && r.data.error) || "Could not place the order. Please try again."; err.hidden = false; return; }
 
+  localStorage.setItem("as.last", JSON.stringify([...cart.entries()]));
   showConfirm(name.split(" ")[0], r.data && r.data.reference);
   cart.clear(); saveCart(); updateCart(); renderProducts();
 }
@@ -238,10 +248,12 @@ function renderAccount() {
       <p class="muted">${esc(me.phone)}</p>
       ${me.mustChangePassword ? `<button class="btn" data-go="changepw" style="margin:12px 0">Set your password</button>` : ""}
       <div class="sec-label">Your businesses</div>
-      ${stores || `<p class="muted">No businesses linked yet. Ask AfricanSpring to link your store.</p>`}
+      ${stores || `<p class="muted">No businesses linked yet.</p>`}
+      <button class="btn ghost" data-go="addbiz" style="margin-top:10px">+ Add a business</button>
       <div class="sec-label">Recent orders</div>
       <div id="history" class="muted">Loading…</div>
-      <div class="row-btns" style="margin-top:18px">
+      ${hasLast() ? `<button class="btn" data-reorder style="margin-top:16px">Reorder last order</button>` : ""}
+      <div class="row-btns" style="margin-top:12px">
         <button class="btn ghost" data-go="shop">Order more</button>
         <button class="btn ghost" data-logout><svg class="icon sm"><use href="#i-out"/></svg> Log out</button>
       </div>
@@ -275,6 +287,7 @@ document.addEventListener("click", (e) => {
   if (goEl) { e.preventDefault(); go(goEl.dataset.go); return; }
   if (e.target.closest("[data-logout]")) { e.preventDefault(); logout(); return; }
   const track = e.target.closest("[data-track]"); if (track) { openTrack(Number(track.dataset.track)); return; }
+  if (e.target.closest("[data-reorder]")) { reorder(); return; }
   const add = e.target.closest("[data-add]"); if (add) { setQty(Number(add.dataset.add), (cart.get(Number(add.dataset.add)) || 0) + 1); return; }
   const inc = e.target.closest("[data-inc]"); if (inc) { setQty(Number(inc.dataset.inc), (cart.get(Number(inc.dataset.inc)) || 0) + 1); return; }
   const dec = e.target.closest("[data-dec]"); if (dec) { setQty(Number(dec.dataset.dec), (cart.get(Number(dec.dataset.dec)) || 0) - 1); return; }
@@ -313,6 +326,16 @@ $("registerForm").addEventListener("submit", async (e) => {
   await loadMe();
   toast("Account created — sent to AfricanSpring for approval");
   go(count() > 0 ? "checkout" : "account");
+});
+$("addBizForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("bizErr"); err.hidden = true;
+  const r = await api("/api/portal/stores", { auth: true, body: { name: $("bizName").value.trim(), address: $("bizAddr").value.trim() } });
+  if (!r.ok) { err.textContent = (r.data && r.data.error) || "Could not add the business."; err.hidden = false; return; }
+  $("bizName").value = ""; $("bizAddr").value = "";
+  await loadMe();
+  toast("Business added — sent for approval");
+  go("account");
 });
 $("changePwForm").addEventListener("submit", async (e) => {
   e.preventDefault();
