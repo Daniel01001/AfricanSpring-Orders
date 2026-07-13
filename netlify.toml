@@ -1,0 +1,10 @@
+# Static site, no build step.
+[build]
+  publish = "."
+  command = ""
+
+# Never cache the service worker so new deploys are picked up immediately.
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache"

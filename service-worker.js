@@ -22,14 +22,13 @@ self.addEventListener("fetch", (e) => {
   // Only handle our own static files. API calls (app.africanspring.co.za) pass through.
   if (new URL(req.url).origin !== location.origin) return;
 
+  // Network-first: always try for the latest, cache it, fall back to cache offline.
+  // Avoids serving stale JS/CSS after a deploy while keeping the app usable offline.
   e.respondWith(
-    caches.match(req).then((cached) =>
-      cached ||
-      fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
-        return res;
-      }).catch(() => caches.match("/index.html"))
-    )
+    fetch(req).then((res) => {
+      const copy = res.clone();
+      caches.open(CACHE).then((c) => c.put(req, copy));
+      return res;
+    }).catch(() => caches.match(req).then((cached) => cached || caches.match("/index.html")))
   );
 });
