@@ -70,8 +70,11 @@ function renderProducts() {
     const right = q > 0
       ? `<span class="stepper"><button data-dec="${p.id}" aria-label="Less">&minus;</button><input class="qin" type="number" min="0" inputmode="numeric" value="${q}" data-qty="${p.id}" aria-label="Quantity"><button data-inc="${p.id}" aria-label="More">+</button></span>`
       : `<button class="addbtn" data-add="${p.id}">Add</button>`;
+    const thumb = p.hasImage
+      ? `<span class="thumb has-img"><img src="${API_BASE}/api/products/${p.id}/image" alt="" loading="lazy" onerror="this.remove()"></span>`
+      : `<span class="thumb"><svg class="icon"><use href="#${iconFor(p)}"/></svg></span>`;
     return `<div class="prod">
-      <span class="thumb"><svg class="icon"><use href="#${iconFor(p)}"/></svg></span>
+      ${thumb}
       <span class="p-main"><div class="p-name">${esc(p.name)}</div><div class="p-unit">${esc(p.unitType || "")}</div><div class="p-price num">${money(p.unitPrice)}</div></span>
       ${right}</div>`;
   }).join("");
