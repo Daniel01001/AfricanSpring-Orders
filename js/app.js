@@ -7,6 +7,7 @@ const WHATSAPP = "27839580908";
 
 let products = [];
 let me = null;
+let historyOrders = [];
 let activeStoreId = Number(localStorage.getItem(STORE_KEY)) || null;
 const cart = new Map(loadCart());
 
@@ -175,17 +176,42 @@ async function placeOrder(e) {
   cart.clear(); saveCart(); updateCart(); renderProducts();
 }
 
+const TRACK_STEPS = [
+  ["Order received", "We've got your request."],
+  ["Confirmed", "We confirmed your order."],
+  ["Out for delivery", "On the way to you."],
+  ["Delivered", "Enjoy — thanks!"]
+];
+// Which step is active for each status (Delivered = 4 → all steps complete).
+const STATUS_STEP = { New: 0, Confirmed: 1, OutForDelivery: 2, Delivered: 4 };
+function renderTimeline(elId, status) {
+  const el = document.getElementById(elId);
+  if (status === "Cancelled") {
+    el.innerHTML = `<li class="now"><span class="bead" style="background:var(--danger);border-color:var(--danger)"></span><span><div class="st">Cancelled</div><div class="sd">This order was cancelled. Get in touch if that's not right.</div></span></li>`;
+    return;
+  }
+  const active = STATUS_STEP[status] ?? 0;
+  el.innerHTML = TRACK_STEPS.map((s, i) => {
+    const cls = i < active ? "done" : (i === active ? "now" : "todo");
+    return `<li class="${cls}"><span class="bead"></span><span><div class="st">${s[0]}</div><div class="sd">${s[1]}</div></span></li>`;
+  }).join("");
+}
+
 function showConfirm(firstName, reference) {
   $("refCode").textContent = reference || ("AS-" + String(Math.floor(1000 + Math.random() * 9000)));
   $("confirmSub").textContent = `We'll Call/WhatsApp ${firstName} shortly to confirm delivery.`;
-  const STEPS = [
-    ["Order received", "We've got your request."],
-    ["Confirmed", "We message you to lock in details."],
-    ["Out for delivery", "On the way to you."],
-    ["Delivered", "Pay the driver, enjoy."]
-  ];
-  $("steps").innerHTML = STEPS.map((s, i) => `<li class="${i === 0 ? "now" : "todo"}"><span class="bead"></span><span><div class="st">${s[0]}</div><div class="sd">${s[1]}</div></span></li>`).join("");
+  renderTimeline("steps", "New");
   go("confirm");
+}
+
+function openTrack(id) {
+  const o = historyOrders.find((x) => x.id === id);
+  if (!o) return;
+  const d = new Date(o.createdAt);
+  $("trackRef").textContent = "AS-" + String(o.id).padStart(4, "0");
+  $("trackSub").textContent = (o.productName || "Order") + " · " + d.toLocaleDateString();
+  renderTimeline("trackSteps", o.status);
+  go("track");
 }
 
 /* ---------- Auth + account ---------- */
@@ -222,16 +248,21 @@ function renderAccount() {
     </div>`;
   loadHistory();
 }
+const SLABEL = { New: "New", Confirmed: "Confirmed", OutForDelivery: "Out for delivery", Delivered: "Delivered", Cancelled: "Cancelled" };
 async function loadHistory() {
   const r = await api("/api/portal/orders", { auth: true });
   const el = $("history"); if (!el) return;
   if (!r.ok || !Array.isArray(r.data) || !r.data.length) { el.innerHTML = `<p class="muted">No orders yet.</p>`; return; }
+  historyOrders = r.data;
   el.classList.remove("muted");
   el.innerHTML = r.data.map((o) => {
     const d = new Date(o.createdAt);
-    const pill = o.status === "Fulfilled" ? "grey" : "new";
+    const pill = (o.status === "Delivered" || o.status === "Cancelled") ? "grey" : "new";
     const ref = "AS-" + String(o.id).padStart(4, "0");
-    return `<div class="store-row"><span class="s-main"><div class="s-name">${esc(o.productName || "Order")} <span class="pill grey">${ref}</span></div><div class="s-sub">${d.toLocaleDateString()} &middot; ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></span><span class="pill ${pill}">${esc(o.status)}</span></div>`;
+    return `<div class="store-row" data-track="${o.id}" style="cursor:pointer">
+      <span class="s-main"><div class="s-name">${esc(o.productName || "Order")} <span class="pill grey">${ref}</span></div><div class="s-sub">${d.toLocaleDateString()} &middot; ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></span>
+      <span class="pill ${pill}">${SLABEL[o.status] || esc(o.status)}</span>
+      <svg class="icon sm" style="color:var(--faint)"><use href="#i-chev"/></svg></div>`;
   }).join("");
 }
 function logout() { localStorage.removeItem(T_KEY); localStorage.removeItem(STORE_KEY); me = null; activeStoreId = null; toast("Logged out"); go("shop"); }
@@ -243,6 +274,7 @@ document.addEventListener("click", (e) => {
   const goEl = e.target.closest("[data-go]");
   if (goEl) { e.preventDefault(); go(goEl.dataset.go); return; }
   if (e.target.closest("[data-logout]")) { e.preventDefault(); logout(); return; }
+  const track = e.target.closest("[data-track]"); if (track) { openTrack(Number(track.dataset.track)); return; }
   const add = e.target.closest("[data-add]"); if (add) { setQty(Number(add.dataset.add), (cart.get(Number(add.dataset.add)) || 0) + 1); return; }
   const inc = e.target.closest("[data-inc]"); if (inc) { setQty(Number(inc.dataset.inc), (cart.get(Number(inc.dataset.inc)) || 0) + 1); return; }
   const dec = e.target.closest("[data-dec]"); if (dec) { setQty(Number(dec.dataset.dec), (cart.get(Number(dec.dataset.dec)) || 0) - 1); return; }

@@ -125,6 +125,7 @@ h2 { font-size: 20px; letter-spacing: -0.02em; margin: 0 0 4px; }
 .steps li { display: flex; gap: 12px; padding-bottom: 16px; position: relative; }
 .steps li:not(:last-child)::before { content: ""; position: absolute; left: 8px; top: 20px; bottom: 0; width: 2px; background: var(--line); }
 .steps .bead { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line2); background: var(--surface); flex: none; z-index: 1; margin-top: 2px; }
+.steps li.done .bead { background: var(--ok); border-color: var(--ok); }
 .steps li.now .bead { background: var(--accent); border-color: var(--accent); }
 .steps .st { font-weight: 700; font-size: 14px; }
 .steps li.todo .st { color: var(--muted); font-weight: 500; }
