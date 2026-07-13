@@ -29,7 +29,7 @@ Static Site, no build:
 - **Publish directory:** `.`
 - Or use the included `render.yaml` (New → Blueprint).
 
-Then add the custom domain (e.g. `orders.africanspring.co.za`) in Render →
+Then add the custom domain (e.g. `order.africanspring.co.za`) in Netlify →
 Settings → Custom Domains, and point the DNS `CNAME` as Render instructs.
 
 ## Local preview
