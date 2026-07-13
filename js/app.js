@@ -67,7 +67,7 @@ function renderProducts() {
   el.innerHTML = products.map((p) => {
     const q = cart.get(p.id) || 0;
     const right = q > 0
-      ? `<span class="stepper"><button data-dec="${p.id}" aria-label="Less">&minus;</button><span class="n">${q}</span><button data-inc="${p.id}" aria-label="More">+</button></span>`
+      ? `<span class="stepper"><button data-dec="${p.id}" aria-label="Less">&minus;</button><input class="qin" type="number" min="0" inputmode="numeric" value="${q}" data-qty="${p.id}" aria-label="Quantity"><button data-inc="${p.id}" aria-label="More">+</button></span>`
       : `<button class="addbtn" data-add="${p.id}">Add</button>`;
     return `<div class="prod">
       <span class="thumb"><svg class="icon"><use href="#${iconFor(p)}"/></svg></span>
@@ -76,6 +76,9 @@ function renderProducts() {
   }).join("");
 }
 function setQty(id, q) { q = Math.max(0, q); if (q === 0) cart.delete(id); else cart.set(id, q); saveCart(); renderProducts(); updateCart(); }
+// Update the cart while the user is typing a quantity, without re-rendering
+// (which would steal focus mid-number). Full re-render happens on blur (change).
+function updateQtyLive(id, q) { q = Math.max(0, q || 0); if (q === 0) cart.delete(id); else cart.set(id, q); saveCart(); updateCart(); }
 function updateCart() {
   const n = count();
   const badge = $("cartBadge");
@@ -93,28 +96,38 @@ function renderCheckout() {
     return `<div class="li"><div><div style="font-weight:600">${esc(p.name)}</div><div class="l-s">${q} &times; ${money(p.unitPrice)} &middot; ${esc(p.unitType || "")}</div><button class="rm" data-rm="${id}">Remove</button></div><div class="l-a num">${money(q * p.unitPrice)}</div></div>`;
   }).join("");
 
-  const picker = (me && me.stores && me.stores.length)
-    ? `<div class="field"><label>Business</label><select id="cstore">${me.stores.map((s) => `<option value="${s.id}" ${s.id === activeStoreId ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></div>` : "";
-  const acct = me
-    ? `<div class="acct">Ordering as <strong>${esc(me.name)}</strong> &middot; <a href="#" data-logout>log out</a></div>`
-    : `<div class="acct">Ordering as guest. <a href="#" data-go="login">Log in</a> for saved details.</div>`;
-
-  $("checkout").innerHTML = `
+  const summary = `
     <div class="card">${lines}
       <div style="border-top:1px solid var(--line);margin-top:8px;padding-top:10px">
         <div class="trow"><span class="m">Subtotal</span><span class="num">${money(subtotal())}</span></div>
         <div class="trow"><span class="m">Delivery</span><span class="free">Free</span></div>
         <div class="trow big"><span>Total</span><span class="num">${money(subtotal())}</span></div>
       </div>
-    </div>
-    ${acct}
+    </div>`;
+
+  // Orders require an account — no guest checkout.
+  if (!me) {
+    $("checkout").innerHTML = summary + `
+      <div class="card center">
+        <p class="muted" style="margin:0 0 12px">Log in or create an account to place your order.</p>
+        <div class="row-btns">
+          <button class="btn" data-go="login">Log in</button>
+          <button class="btn ghost" data-go="register">Create account</button>
+        </div>
+      </div>`;
+    wireRemove();
+    return;
+  }
+
+  const picker = (me.stores && me.stores.length)
+    ? `<div class="field"><label>Business</label><select id="cstore">${me.stores.map((s) => `<option value="${s.id}" ${s.id === activeStoreId ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></div>` : "";
+
+  $("checkout").innerHTML = summary + `
+    <div class="acct">Ordering as <strong>${esc(me.name)}</strong> &middot; <a href="#" data-logout>log out</a></div>
     <form id="orderForm">
       ${picker}
-      <div class="field"><label>Name</label><input id="cname" value="${me ? esc(me.name) : ""}" placeholder="Your name" required></div>
-      <div class="two">
-        <div class="field"><label>Phone</label><input id="cphone" type="tel" value="${me ? esc(me.phone) : ""}" placeholder="083 000 0000" required></div>
-        <div class="field"><label>Time</label><select id="ctime"><option>As soon as possible</option><option>Today, afternoon</option><option>Tomorrow, morning</option><option>Tomorrow, afternoon</option></select></div>
-      </div>
+      <div class="field"><label>Name</label><input id="cname" value="${esc(me.name)}" placeholder="Your name" required></div>
+      <div class="field"><label>Phone</label><input id="cphone" type="tel" value="${esc(me.phone)}" placeholder="083 000 0000" required></div>
       <div class="field"><label>Delivery address</label><input id="caddr" placeholder="Street / section" required></div>
       <div class="field"><label>Notes</label><textarea id="cnote" placeholder="Gate code, landmark (optional)"></textarea></div>
       <div class="pay">Pay cash on delivery <span class="tag">Card coming soon</span></div>
@@ -123,10 +136,14 @@ function renderCheckout() {
     </form>`;
 
   prefillAddress();
-  $("checkout").querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => { setQty(Number(b.dataset.rm), 0); count() ? renderCheckout() : go("shop"); }));
+  wireRemove();
   const sel = $("cstore");
   if (sel) sel.addEventListener("change", () => { activeStoreId = Number(sel.value); localStorage.setItem(STORE_KEY, activeStoreId); prefillAddress(); });
   $("orderForm").addEventListener("submit", placeOrder);
+}
+function wireRemove() {
+  $("checkout").querySelectorAll("[data-rm]").forEach((b) =>
+    b.addEventListener("click", () => { setQty(Number(b.dataset.rm), 0); count() ? renderCheckout() : go("shop"); }));
 }
 function prefillAddress() {
   if (!me) return;
@@ -140,11 +157,11 @@ async function placeOrder(e) {
   const name = $("cname").value.trim(), phone = $("cphone").value.trim(), addr = $("caddr").value.trim();
   const err = $("orderErr");
   if (!name || !phone || !addr) { err.textContent = "Please add your name, phone and address."; err.hidden = false; return; }
-  const time = $("ctime").value, note = $("cnote").value.trim();
+  const note = $("cnote").value.trim();
 
   const short = [...cart.entries()].map(([id, q]) => { const p = byId(id); return p ? `${q}x ${p.name}` : ""; }).filter(Boolean).join(", ");
   const itemized = [...cart.entries()].map(([id, q]) => { const p = byId(id); return p ? `${q} x ${p.name} @ ${money(p.unitPrice)}` : ""; }).filter(Boolean).join("\n");
-  const details = `Items:\n${itemized}\nTotal: ${money(subtotal())}\nDeliver to: ${addr}\nWhen: ${time}${note ? "\nNotes: " + note : ""}`;
+  const details = `Items:\n${itemized}\nTotal: ${money(subtotal())}\nDeliver to: ${addr}${note ? "\nNotes: " + note : ""}`;
 
   const body = { name, phone, product: short.slice(0, 120), details, website: "" };
   if (me) { const s = $("cstore"); if (s) body.storeId = Number(s.value); }
@@ -160,7 +177,7 @@ async function placeOrder(e) {
 
 function showConfirm(firstName) {
   $("refCode").textContent = "AS-" + Math.floor(1000 + Math.random() * 9000);
-  $("confirmSub").textContent = `We'll WhatsApp ${firstName} shortly to confirm delivery.`;
+  $("confirmSub").textContent = `We'll Call/WhatsApp ${firstName} shortly to confirm delivery.`;
   const STEPS = [
     ["Order received", "We've got your request."],
     ["Confirmed", "We message you to lock in details."],
@@ -229,6 +246,14 @@ document.addEventListener("click", (e) => {
   const inc = e.target.closest("[data-inc]"); if (inc) { setQty(Number(inc.dataset.inc), (cart.get(Number(inc.dataset.inc)) || 0) + 1); return; }
   const dec = e.target.closest("[data-dec]"); if (dec) { setQty(Number(dec.dataset.dec), (cart.get(Number(dec.dataset.dec)) || 0) - 1); return; }
 });
+document.addEventListener("input", (e) => {
+  const q = e.target.closest("[data-qty]");
+  if (q) updateQtyLive(Number(q.dataset.qty), parseInt(q.value, 10));
+});
+document.addEventListener("change", (e) => {
+  const q = e.target.closest("[data-qty]");
+  if (q) setQty(Number(q.dataset.qty), parseInt(q.value, 10) || 0);
+});
 
 $("homeBtn").addEventListener("click", () => go("shop"));
 $("accountBtn").addEventListener("click", () => go(token() ? "account" : "login"));
@@ -244,7 +269,7 @@ $("loginForm").addEventListener("submit", async (e) => {
   localStorage.setItem(T_KEY, r.data.token);
   await loadMe();
   toast("Logged in");
-  go(r.data.mustChangePassword ? "changepw" : "account");
+  go(r.data.mustChangePassword ? "changepw" : (count() > 0 ? "checkout" : "account"));
 });
 $("registerForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -254,7 +279,7 @@ $("registerForm").addEventListener("submit", async (e) => {
   localStorage.setItem(T_KEY, r.data.token);
   await loadMe();
   toast("Account created — sent to AfricanSpring for approval");
-  go("account");
+  go(count() > 0 ? "checkout" : "account");
 });
 $("changePwForm").addEventListener("submit", async (e) => {
   e.preventDefault();
