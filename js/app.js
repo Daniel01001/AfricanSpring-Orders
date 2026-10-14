@@ -1,9 +1,9 @@
 // AfricanSpring ordering portal. Talks to the inventory app's public API.
-// If Render gives the app a different host, change API_BASE below.
+// The app runs on Cloudflare Workers at this address.
 const API_BASE = "https://app.africanspring.co.za";
 
 const T_KEY = "as.token", CART_KEY = "as.cart", PROD_KEY = "as.products", STORE_KEY = "as.store";
-const WHATSAPP = "27839580908";
+const WHATSAPP = "27833751151";
 
 let products = [];
 let me = null;
@@ -12,7 +12,8 @@ let activeStoreId = Number(localStorage.getItem(STORE_KEY)) || null;
 const cart = new Map(loadCart());
 
 const $ = (id) => document.getElementById(id);
-const money = (n) => "R" + Number(n).toFixed(2);
+// "R 1 250.00" — same format as the staff app, independent of the phone's locale.
+const money = (n) => { const c = Math.round(Math.abs(Number(n) || 0) * 100); return (n < 0 ? "-" : "") + "R " + String(Math.floor(c / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + "." + String(c % 100).padStart(2, "0"); };
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const token = () => localStorage.getItem(T_KEY);
 const byId = (id) => products.find((p) => p.id === id);
@@ -71,7 +72,7 @@ function renderProducts() {
       ? `<span class="stepper"><button data-dec="${p.id}" aria-label="Less">&minus;</button><input class="qin" type="number" min="0" inputmode="numeric" value="${q}" data-qty="${p.id}" aria-label="Quantity"><button data-inc="${p.id}" aria-label="More">+</button></span>`
       : `<button class="addbtn" data-add="${p.id}">Add</button>`;
     const thumb = p.hasImage
-      ? `<span class="thumb has-img"><img src="${API_BASE}/api/products/${p.id}/image" alt="" loading="lazy" onerror="this.remove()"></span>`
+      ? `<span class="thumb has-img"><img src="${API_BASE}/api/products/${p.id}/image?v=${p.imageVersion || 0}" alt="" loading="lazy" onerror="this.remove()"></span>`
       : `<span class="thumb"><svg class="icon"><use href="#${iconFor(p)}"/></svg></span>`;
     return `<div class="prod">
       ${thumb}
@@ -194,10 +195,11 @@ const TRACK_STEPS = [
   ["Order received", "We've got your request."],
   ["Confirmed", "We confirmed your order."],
   ["Out for delivery", "On the way to you."],
-  ["Delivered", "Enjoy — thanks!"]
+  ["Delivered", "It's with you. Enjoy!"],
+  ["Paid", "All settled. Thank you!"]
 ];
-// Which step is active for each status (Delivered = 4 → all steps complete).
-const STATUS_STEP = { New: 0, Confirmed: 1, OutForDelivery: 2, Delivered: 4 };
+// Which step is current for each status (Paid = 5 → every step complete).
+const STATUS_STEP = { New: 0, Confirmed: 1, OutForDelivery: 2, Delivered: 3, Paid: 5 };
 function renderTimeline(elId, status) {
   const el = document.getElementById(elId);
   if (status === "Cancelled") {
@@ -224,6 +226,13 @@ function openTrack(id) {
   const d = new Date(o.createdAt);
   $("trackRef").textContent = "AS-" + String(o.id).padStart(4, "0");
   $("trackSub").textContent = (o.productName || "Order") + " · " + d.toLocaleDateString();
+  const items = $("trackItems");
+  if (o.items && o.items.length) {
+    const total = o.items.reduce((n, i) => n + (i.total || 0), 0);
+    items.innerHTML = o.items.map((i) => `<div><span>${esc(i.quantity)} &times; ${esc(i.name)}</span><span class="num">${money(i.total)}</span></div>`).join("")
+      + `<div style="font-weight:700;margin-top:4px"><span>Total</span><span class="num">${money(total)}</span></div>`;
+    items.hidden = false;
+  } else items.hidden = true;
   renderTimeline("trackSteps", o.status);
   go("track");
 }
@@ -264,7 +273,7 @@ function renderAccount() {
     </div>`;
   loadHistory();
 }
-const SLABEL = { New: "New", Confirmed: "Confirmed", OutForDelivery: "Out for delivery", Delivered: "Delivered", Cancelled: "Cancelled" };
+const SLABEL = { New: "New", Confirmed: "Confirmed", OutForDelivery: "Out for delivery", Delivered: "Delivered", Paid: "Paid", Cancelled: "Cancelled" };
 async function loadHistory() {
   const r = await api("/api/portal/orders", { auth: true });
   const el = $("history"); if (!el) return;
@@ -273,8 +282,8 @@ async function loadHistory() {
   el.classList.remove("muted");
   el.innerHTML = r.data.map((o) => {
     const d = new Date(o.createdAt);
-    const pill = (o.status === "Delivered" || o.status === "Cancelled") ? "grey" : "new";
-    const ref = "AS-" + String(o.id).padStart(4, "0");
+    const pill = o.status === "Paid" ? "ok" : (o.status === "Delivered" || o.status === "Cancelled") ? "grey" : o.status === "New" ? "new" : "info";
+    const ref = o.reference || ("AS-" + String(o.id).padStart(4, "0"));
     return `<div class="store-row" data-track="${o.id}" style="cursor:pointer">
       <span class="s-main"><div class="s-name">${esc(o.productName || "Order")} <span class="pill grey">${ref}</span></div><div class="s-sub">${d.toLocaleDateString()} &middot; ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></span>
       <span class="pill ${pill}">${SLABEL[o.status] || esc(o.status)}</span>

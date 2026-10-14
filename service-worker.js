@@ -1,7 +1,7 @@
-const CACHE = "as-orders-v1";
+const CACHE = "as-orders-v2";
 const SHELL = [
   "/", "/index.html", "/css/styles.css", "/js/app.js", "/manifest.webmanifest",
-  "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png", "/favicon-32.png"
+  "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png", "/favicon-32.png", "/favicon.svg"
 ];
 
 self.addEventListener("install", (e) => {
